@@ -1240,39 +1240,64 @@
 </div>
 
 <script>
-document.getElementById("contactForm").addEventListener("submit", async (e) => {
+document.getElementById("contactForm").addEventListener("submit", async function(e) {
   e.preventDefault();
 
   const form = e.target;
   const formData = {
-    name: form.name.value,
-    email: form.email.value,
-    subject: form.subject.value,
-    message: form.message.value,
+    name: form.name.value.trim(),
+    email: form.email.value.trim(),
+    subject: form.subject.value.trim(),
+    message: form.message.value.trim(),
     date: new Date().toISOString()
   };
 
-  document.querySelector(".loading").style.display = "block";
-  document.querySelector(".error-message").textContent = "";
+  const loading = document.querySelector(".loading");
+  const successMsg = document.querySelector(".sent-message");
+  const errorMsg = document.querySelector(".error-message");
+
+  loading.style.display = "block";
+  successMsg.style.display = "none";
+  errorMsg.textContent = "";
 
   try {
-    const res = await fetch("/api/submit", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(formData)
+    // Fetch existing data from JSONBin
+    const BIN_ID = "6903b45eae596e708f3877a2"; // Replace with your actual bin ID
+    const API_KEY = "$2a$10$YpE3Ed9MVQMojjLw/JAIpuaizbfzSk2rkzuhgMn.LhE09Dr32T1h6";
+
+    const getResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}/latest`, {
+      headers: { "X-Master-Key": API_KEY }
     });
 
-    const result = await res.json();
-    if (result.success) {
-      document.querySelector(".sent-message").style.display = "block";
+    let currentData = [];
+    if (getResponse.ok) {
+      const json = await getResponse.json();
+      currentData = json.record || [];
+    }
+
+    currentData.push(formData);
+
+    // Update the bin with the new entry
+    const updateResponse = await fetch(`https://api.jsonbin.io/v3/b/${BIN_ID}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Master-Key": API_KEY
+      },
+      body: JSON.stringify(currentData)
+    });
+
+    if (updateResponse.ok) {
+      successMsg.style.display = "block";
       form.reset();
     } else {
-      document.querySelector(".error-message").textContent = "Failed to save message.";
+      errorMsg.textContent = "Failed to save data. Please try again.";
     }
-  } catch (err) {
-    document.querySelector(".error-message").textContent = "Error: " + err.message;
+
+  } catch (error) {
+    errorMsg.textContent = "Error: " + error.message;
   } finally {
-    document.querySelector(".loading").style.display = "none";
+    loading.style.display = "none";
   }
 });
 </script>
